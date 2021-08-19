@@ -1,0 +1,12 @@
+I"<h2 id="background">Background</h2>
+
+<p>With massive data currently available, businesses and industries are collecting and churning out billions of data every day. The big data phenomenon requires a proper skill set to be able to make meaning out of it — be it in the medical field, education, business, sports, etc.</p>
+
+<p>When we deal with big data, we have to deal with database. The database includes numerous tables and a table stores rows of data in an organized format characterized by the table’s columns (also called fields).</p>
+
+<p>SQL (<em>Structured Query Language</em>) is the most mainstream language that is used to access databases because it can work with any database.</p>
+
+<h2 id="practices">Practices</h2>
+
+<p>For <strong>the first</strong> question, I use Chinook database from SQLite Tutorial. For another question I use sammple dummy database from my bootcamp.</p>
+:ET

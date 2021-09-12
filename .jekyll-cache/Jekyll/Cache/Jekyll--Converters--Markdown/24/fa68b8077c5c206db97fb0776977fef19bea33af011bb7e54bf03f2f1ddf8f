@@ -1,0 +1,1253 @@
+I"��
+<h1 id="airline-customer-value-analysis-case">Airline customer value analysis case</h1>
+
+<p>Use airline customer data to classify customers, analyze characteristics of different customer categories, compare customer values ​​of different customer categories, provide personalized services to customer categories of different values, and formulate corresponding marketing strategy.</p>
+
+<p>You can find the dataset in <a href="https://drive.google.com/drive/folders/1v7BjYPybGlhQ9oNiPwgA-1l1uh3Vi3yW">here</a></p>
+
+<p>This data contains the basic information, flight information and point information of 62,988 customers. It contains the membership card number, membership time, gender, age, membership card level, and the mileage in the observation window. 44 characteristic attributes such as number and flight time.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="n">sns</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+</code></pre></div></div>
+
+<h2 id="load-data">Load data</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">raw</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">'flight.csv'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="data-pre-processing">Data Pre-Processing</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">raw</span><span class="p">.</span><span class="n">info</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 62988 entries, 0 to 62987
+Data columns (total 23 columns):
+ #   Column             Non-Null Count  Dtype  
+---  ------             --------------  -----  
+ 0   MEMBER_NO          62988 non-null  int64  
+ 1   FFP_DATE           62988 non-null  object 
+ 2   FIRST_FLIGHT_DATE  62988 non-null  object 
+ 3   GENDER             62985 non-null  object 
+ 4   FFP_TIER           62988 non-null  int64  
+ 5   WORK_CITY          60719 non-null  object 
+ 6   WORK_PROVINCE      59740 non-null  object 
+ 7   WORK_COUNTRY       62962 non-null  object 
+ 8   AGE                62568 non-null  float64
+ 9   LOAD_TIME          62988 non-null  object 
+ 10  FLIGHT_COUNT       62988 non-null  int64  
+ 11  BP_SUM             62988 non-null  int64  
+ 12  SUM_YR_1           62437 non-null  float64
+ 13  SUM_YR_2           62850 non-null  float64
+ 14  SEG_KM_SUM         62988 non-null  int64  
+ 15  LAST_FLIGHT_DATE   62988 non-null  object 
+ 16  LAST_TO_END        62988 non-null  int64  
+ 17  AVG_INTERVAL       62988 non-null  float64
+ 18  MAX_INTERVAL       62988 non-null  int64  
+ 19  EXCHANGE_COUNT     62988 non-null  int64  
+ 20  avg_discount       62988 non-null  float64
+ 21  Points_Sum         62988 non-null  int64  
+ 22  Point_NotFlight    62988 non-null  int64  
+dtypes: float64(5), int64(10), object(8)
+memory usage: 11.1+ MB
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># convert date column to datatime format
+</span><span class="n">raw</span><span class="p">[</span><span class="s">'FFP_DATE'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s">'FFP_DATE'</span><span class="p">])</span>
+<span class="n">raw</span><span class="p">[</span><span class="s">'FIRST_FLIGHT_DATE'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s">'FIRST_FLIGHT_DATE'</span><span class="p">])</span>
+<span class="n">raw</span><span class="p">[</span><span class="s">'LOAD_TIME'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s">'LOAD_TIME'</span><span class="p">])</span>
+<span class="n">raw</span><span class="p">[</span><span class="s">'LAST_FLIGHT_DATE'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s">'LAST_FLIGHT_DATE'</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s">'coerce'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">overview</span> <span class="o">=</span> <span class="p">[[</span><span class="n">column</span><span class="p">,</span> <span class="n">raw</span><span class="p">[</span><span class="n">column</span><span class="p">].</span><span class="n">dtypes</span><span class="p">,</span> <span class="n">raw</span><span class="p">[</span><span class="n">column</span><span class="p">].</span><span class="n">nunique</span><span class="p">(),</span> <span class="n">raw</span><span class="p">[</span><span class="n">column</span><span class="p">].</span><span class="n">unique</span><span class="p">()]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">raw</span><span class="p">.</span><span class="n">columns</span><span class="p">]</span>
+<span class="n">raw_overview</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">overview</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">'cols'</span><span class="p">,</span><span class="s">'dtype'</span><span class="p">,</span><span class="s">'unique values'</span><span class="p">,</span><span class="s">'values'</span><span class="p">])</span>
+<span class="n">raw_overview</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cols</th>
+      <th>dtype</th>
+      <th>unique values</th>
+      <th>values</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>MEMBER_NO</td>
+      <td>int64</td>
+      <td>62988</td>
+      <td>[54993, 28065, 55106, 21189, 39546, 56972, 449...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>FFP_DATE</td>
+      <td>datetime64[ns]</td>
+      <td>3068</td>
+      <td>[2006-11-02T00:00:00.000000000, 2007-02-19T00:...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>FIRST_FLIGHT_DATE</td>
+      <td>datetime64[ns]</td>
+      <td>3406</td>
+      <td>[2008-12-24T00:00:00.000000000, 2007-08-03T00:...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>GENDER</td>
+      <td>object</td>
+      <td>2</td>
+      <td>[Male, Female, nan]</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>FFP_TIER</td>
+      <td>int64</td>
+      <td>3</td>
+      <td>[6, 5, 4]</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>WORK_CITY</td>
+      <td>object</td>
+      <td>3234</td>
+      <td>[., nan, Los Angeles, guiyang, guangzhou, wulu...</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>WORK_PROVINCE</td>
+      <td>object</td>
+      <td>1165</td>
+      <td>[beijing, CA, guizhou, guangdong, xinjiang, zh...</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>WORK_COUNTRY</td>
+      <td>object</td>
+      <td>118</td>
+      <td>[CN, US, FR, AN, JP, HK, MY, AU, NL, MX, CA, K...</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>AGE</td>
+      <td>float64</td>
+      <td>84</td>
+      <td>[31.0, 42.0, 40.0, 64.0, 48.0, 46.0, 50.0, 43....</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>LOAD_TIME</td>
+      <td>datetime64[ns]</td>
+      <td>1</td>
+      <td>[2014-03-31T00:00:00.000000000]</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>FLIGHT_COUNT</td>
+      <td>int64</td>
+      <td>153</td>
+      <td>[210, 140, 135, 23, 152, 92, 101, 73, 56, 64, ...</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>BP_SUM</td>
+      <td>int64</td>
+      <td>23449</td>
+      <td>[505308, 362480, 351159, 337314, 273844, 31333...</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>SUM_YR_1</td>
+      <td>float64</td>
+      <td>15828</td>
+      <td>[239560.0, 171483.0, 163618.0, 116350.0, 12456...</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>SUM_YR_2</td>
+      <td>float64</td>
+      <td>16767</td>
+      <td>[234188.0, 167434.0, 164982.0, 125500.0, 13070...</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>SEG_KM_SUM</td>
+      <td>int64</td>
+      <td>29081</td>
+      <td>[580717, 293678, 283712, 281336, 309928, 29458...</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>LAST_FLIGHT_DATE</td>
+      <td>datetime64[ns]</td>
+      <td>730</td>
+      <td>[2014-03-31T00:00:00.000000000, 2014-03-25T00:...</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>LAST_TO_END</td>
+      <td>int64</td>
+      <td>731</td>
+      <td>[1, 7, 11, 97, 5, 79, 3, 6, 15, 22, 67, 2, 65,...</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>AVG_INTERVAL</td>
+      <td>float64</td>
+      <td>10706</td>
+      <td>[3.483253589, 5.194244604, 5.298507463, 27.863...</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>MAX_INTERVAL</td>
+      <td>int64</td>
+      <td>706</td>
+      <td>[18, 17, 73, 47, 52, 28, 45, 94, 95, 42, 112, ...</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>EXCHANGE_COUNT</td>
+      <td>int64</td>
+      <td>28</td>
+      <td>[34, 29, 20, 11, 27, 10, 7, 5, 13, 1, 15, 3, 1...</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>avg_discount</td>
+      <td>float64</td>
+      <td>54179</td>
+      <td>[0.961639043, 1.25231444, 1.254675516, 1.09086...</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Points_Sum</td>
+      <td>int64</td>
+      <td>25062</td>
+      <td>[619760, 415768, 406361, 372204, 338813, 34312...</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Point_NotFlight</td>
+      <td>int64</td>
+      <td>99</td>
+      <td>[50, 33, 26, 12, 39, 15, 29, 14, 7, 16, 3, 66,...</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="missing-values">Missing Values</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">raw</span><span class="p">.</span><span class="n">isna</span><span class="p">().</span><span class="nb">any</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MEMBER_NO            False
+FFP_DATE             False
+FIRST_FLIGHT_DATE    False
+GENDER                True
+FFP_TIER             False
+WORK_CITY             True
+WORK_PROVINCE         True
+WORK_COUNTRY          True
+AGE                   True
+LOAD_TIME            False
+FLIGHT_COUNT         False
+BP_SUM               False
+SUM_YR_1              True
+SUM_YR_2              True
+SEG_KM_SUM           False
+LAST_FLIGHT_DATE      True
+LAST_TO_END          False
+AVG_INTERVAL         False
+MAX_INTERVAL         False
+EXCHANGE_COUNT       False
+avg_discount         False
+Points_Sum           False
+Point_NotFlight      False
+dtype: bool
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">raw</span><span class="p">.</span><span class="n">isnull</span><span class="p">().</span><span class="nb">sum</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MEMBER_NO               0
+FFP_DATE                0
+FIRST_FLIGHT_DATE       0
+GENDER                  3
+FFP_TIER                0
+WORK_CITY            2269
+WORK_PROVINCE        3248
+WORK_COUNTRY           26
+AGE                   420
+LOAD_TIME               0
+FLIGHT_COUNT            0
+BP_SUM                  0
+SUM_YR_1              551
+SUM_YR_2              138
+SEG_KM_SUM              0
+LAST_FLIGHT_DATE      421
+LAST_TO_END             0
+AVG_INTERVAL            0
+MAX_INTERVAL            0
+EXCHANGE_COUNT          0
+avg_discount            0
+Points_Sum              0
+Point_NotFlight         0
+dtype: int64
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># check the proportion of missing value
+</span>
+<span class="k">print</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'WORK_CITY'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span> <span class="n">raw</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'WORK_PROVINCE'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span> <span class="n">raw</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0.03602273448910904
+0.05156537753222836
+</code></pre></div></div>
+
+<p>The two features that have the most missing values, if calculated the percentage of missing values ​​to the total value, are only 3.6% and 5.1%. So, data rows that have missing values ​​will be deleted because they are very few in number.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># drop missing value
+</span><span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'GENDER'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'WORK_CITY'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'WORK_PROVINCE'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'WORK_COUNTRY'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'AGE'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'SUM_YR_1'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'SUM_YR_2'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">raw</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s">'LAST_FLIGHT_DATE'</span><span class="p">].</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">].</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">raw</span><span class="p">.</span><span class="n">info</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+Int64Index: 57860 entries, 0 to 62986
+Data columns (total 23 columns):
+ #   Column             Non-Null Count  Dtype         
+---  ------             --------------  -----         
+ 0   MEMBER_NO          57860 non-null  int64         
+ 1   FFP_DATE           57860 non-null  datetime64[ns]
+ 2   FIRST_FLIGHT_DATE  57860 non-null  datetime64[ns]
+ 3   GENDER             57860 non-null  object        
+ 4   FFP_TIER           57860 non-null  int64         
+ 5   WORK_CITY          57860 non-null  object        
+ 6   WORK_PROVINCE      57860 non-null  object        
+ 7   WORK_COUNTRY       57860 non-null  object        
+ 8   AGE                57860 non-null  float64       
+ 9   LOAD_TIME          57860 non-null  datetime64[ns]
+ 10  FLIGHT_COUNT       57860 non-null  int64         
+ 11  BP_SUM             57860 non-null  int64         
+ 12  SUM_YR_1           57860 non-null  float64       
+ 13  SUM_YR_2           57860 non-null  float64       
+ 14  SEG_KM_SUM         57860 non-null  int64         
+ 15  LAST_FLIGHT_DATE   57860 non-null  datetime64[ns]
+ 16  LAST_TO_END        57860 non-null  int64         
+ 17  AVG_INTERVAL       57860 non-null  float64       
+ 18  MAX_INTERVAL       57860 non-null  int64         
+ 19  EXCHANGE_COUNT     57860 non-null  int64         
+ 20  avg_discount       57860 non-null  float64       
+ 21  Points_Sum         57860 non-null  int64         
+ 22  Point_NotFlight    57860 non-null  int64         
+dtypes: datetime64[ns](4), float64(5), int64(10), object(4)
+memory usage: 10.6+ MB
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="mi">57860</span><span class="o">/</span><span class="mi">62988</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0.9185876674922208
+</code></pre></div></div>
+
+<p>After deleting all missing values ​​in all features, a total of 91.8% of the data was cleared of missing values.</p>
+
+<h2 id="duplicated-values">Duplicated Values</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">raw</span><span class="p">.</span><span class="n">duplicated</span><span class="p">().</span><span class="nb">sum</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0
+</code></pre></div></div>
+
+<p>There is no duplicated data on this dataset.</p>
+
+<h2 id="exploratory-data-analysis">Exploratory Data Analysis</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">df</span> <span class="o">=</span> <span class="n">raw</span><span class="p">.</span><span class="n">copy</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="n">drop</span><span class="p">(</span><span class="s">'MEMBER_NO'</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="statistic-description">Statistic Description</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">df</span><span class="p">.</span><span class="n">describe</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>FFP_TIER</th>
+      <th>AGE</th>
+      <th>FLIGHT_COUNT</th>
+      <th>BP_SUM</th>
+      <th>SUM_YR_1</th>
+      <th>SUM_YR_2</th>
+      <th>SEG_KM_SUM</th>
+      <th>LAST_TO_END</th>
+      <th>AVG_INTERVAL</th>
+      <th>MAX_INTERVAL</th>
+      <th>EXCHANGE_COUNT</th>
+      <th>avg_discount</th>
+      <th>Points_Sum</th>
+      <th>Point_NotFlight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.00000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+      <td>57860.000000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>4.104666</td>
+      <td>42.233253</td>
+      <td>12.043000</td>
+      <td>11047.843726</td>
+      <td>5363.816955</td>
+      <td>5679.279658</td>
+      <td>17324.371863</td>
+      <td>172.20598</td>
+      <td>67.963638</td>
+      <td>167.221673</td>
+      <td>0.327981</td>
+      <td>0.720626</td>
+      <td>12721.368960</td>
+      <td>2.819703</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>0.378206</td>
+      <td>9.763364</td>
+      <td>14.239523</td>
+      <td>16294.179086</td>
+      <td>8110.434363</td>
+      <td>8714.783954</td>
+      <td>20982.734648</td>
+      <td>180.80718</td>
+      <td>77.533059</td>
+      <td>122.901236</td>
+      <td>1.149762</td>
+      <td>0.183942</td>
+      <td>20621.601695</td>
+      <td>7.497873</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>4.000000</td>
+      <td>6.000000</td>
+      <td>2.000000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>368.000000</td>
+      <td>1.00000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>4.000000</td>
+      <td>35.000000</td>
+      <td>3.000000</td>
+      <td>2599.750000</td>
+      <td>1020.000000</td>
+      <td>833.000000</td>
+      <td>4882.000000</td>
+      <td>28.00000</td>
+      <td>23.666667</td>
+      <td>81.000000</td>
+      <td>0.000000</td>
+      <td>0.612019</td>
+      <td>2863.000000</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>4.000000</td>
+      <td>41.000000</td>
+      <td>7.000000</td>
+      <td>5814.000000</td>
+      <td>2804.000000</td>
+      <td>2830.000000</td>
+      <td>10208.000000</td>
+      <td>105.00000</td>
+      <td>44.812500</td>
+      <td>144.000000</td>
+      <td>0.000000</td>
+      <td>0.711429</td>
+      <td>6468.000000</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>4.000000</td>
+      <td>48.000000</td>
+      <td>15.000000</td>
+      <td>12976.250000</td>
+      <td>6584.000000</td>
+      <td>6931.000000</td>
+      <td>21519.000000</td>
+      <td>259.25000</td>
+      <td>82.000000</td>
+      <td>228.000000</td>
+      <td>0.000000</td>
+      <td>0.808333</td>
+      <td>14491.000000</td>
+      <td>1.000000</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>6.000000</td>
+      <td>110.000000</td>
+      <td>213.000000</td>
+      <td>505308.000000</td>
+      <td>239560.000000</td>
+      <td>234188.000000</td>
+      <td>580717.000000</td>
+      <td>731.00000</td>
+      <td>728.000000</td>
+      <td>728.000000</td>
+      <td>46.000000</td>
+      <td>1.500000</td>
+      <td>985572.000000</td>
+      <td>140.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="heat-map-to-check-feature-correlation">Heat map to check feature correlation</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">plt</span><span class="p">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+<span class="n">sns</span><span class="p">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">df</span><span class="p">.</span><span class="n">corr</span><span class="p">(),</span> <span class="n">cmap</span><span class="o">=</span><span class="s">'Blues'</span><span class="p">,</span> <span class="n">annot</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s">'.2f'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><img src="output_27_0.png" alt="png" /></p>
+
+<h3 id="numeric-distribution-and-outlier">Numeric Distribution and Outlier</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">h</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="n">hist</span><span class="p">(</span><span class="n">bins</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">),</span><span class="n">xlabelsize</span><span class="o">=</span><span class="s">'10'</span><span class="p">,</span><span class="n">ylabelsize</span><span class="o">=</span><span class="s">'10'</span><span class="p">,</span><span class="n">xrot</span><span class="o">=-</span><span class="mi">15</span><span class="p">)</span>
+<span class="n">sns</span><span class="p">.</span><span class="n">despine</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="p">[</span><span class="n">x</span><span class="p">.</span><span class="n">title</span><span class="p">.</span><span class="n">set_size</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">h</span><span class="p">.</span><span class="n">ravel</span><span class="p">()];</span>
+<span class="p">[</span><span class="n">x</span><span class="p">.</span><span class="n">yaxis</span><span class="p">.</span><span class="n">tick_left</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">h</span><span class="p">.</span><span class="n">ravel</span><span class="p">()];</span>
+</code></pre></div></div>
+
+<p><img src="output_29_0.png" alt="png" /></p>
+
+<h2 id="feature-selection">Feature Selection</h2>
+
+<p>Based on the LRFMC model, customer grouping is carried out based on the passenger value LRFMC model, and the characteristics of each customer group are analyzed to identify valuable customers.</p>
+
+<p>There are too many attributes in the original data. According to the LRFMC model of airline customer value, <br />six attributes related to LRFMC index are selected: <strong>FFP_DATE, LOAD_TIME, FLIGHT_COUNT, AVG_DISCOUNT, SEG_KM_SUM, LAST_TO_END</strong>.</p>
+
+<p>The data transformations carried out are attributing construction and data standardization. Because the LRFMC feature is not directly contained in the dataset, it needs to be extracted from the original dataset, with the following conditions:</p>
+<ol>
+  <li>L (customer relationship length) = LOAD_TIME-FFP_DATE</li>
+  <li>R (consumption time interval) =LAST_TO_END</li>
+  <li>F (consumption frequency) = FLIGHT_COUNT</li>
+  <li>M (flight mileage) =SEG_KM_SUM</li>
+  <li>C (average value of discount) =AVG_DISCOUNT</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">df_final</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s">'LOAD_TIME'</span><span class="p">,</span> <span class="s">'FFP_DATE'</span><span class="p">,</span> <span class="s">'LAST_TO_END'</span><span class="p">,</span> <span class="s">'FLIGHT_COUNT'</span><span class="p">,</span> <span class="s">'SEG_KM_SUM'</span><span class="p">,</span> <span class="s">'avg_discount'</span><span class="p">]]</span>
+<span class="n">df_final</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>LOAD_TIME</th>
+      <th>FFP_DATE</th>
+      <th>LAST_TO_END</th>
+      <th>FLIGHT_COUNT</th>
+      <th>SEG_KM_SUM</th>
+      <th>avg_discount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2014-03-31</td>
+      <td>2006-11-02</td>
+      <td>1</td>
+      <td>210</td>
+      <td>580717</td>
+      <td>0.961639</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2014-03-31</td>
+      <td>2007-02-01</td>
+      <td>11</td>
+      <td>135</td>
+      <td>283712</td>
+      <td>1.254676</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2014-03-31</td>
+      <td>2008-08-22</td>
+      <td>97</td>
+      <td>23</td>
+      <td>281336</td>
+      <td>1.090870</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2014-03-31</td>
+      <td>2009-04-10</td>
+      <td>5</td>
+      <td>152</td>
+      <td>309928</td>
+      <td>0.970658</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2014-03-31</td>
+      <td>2008-02-10</td>
+      <td>79</td>
+      <td>92</td>
+      <td>294585</td>
+      <td>0.967692</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>62982</th>
+      <td>2014-03-31</td>
+      <td>2013-01-20</td>
+      <td>437</td>
+      <td>2</td>
+      <td>3848</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62983</th>
+      <td>2014-03-31</td>
+      <td>2011-05-20</td>
+      <td>297</td>
+      <td>2</td>
+      <td>1134</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62984</th>
+      <td>2014-03-31</td>
+      <td>2010-03-08</td>
+      <td>89</td>
+      <td>4</td>
+      <td>8016</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62985</th>
+      <td>2014-03-31</td>
+      <td>2006-03-30</td>
+      <td>29</td>
+      <td>2</td>
+      <td>2594</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62986</th>
+      <td>2014-03-31</td>
+      <td>2013-02-06</td>
+      <td>400</td>
+      <td>2</td>
+      <td>3934</td>
+      <td>0.000000</td>
+    </tr>
+  </tbody>
+</table>
+<p>57860 rows × 6 columns</p>
+</div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">L</span> <span class="o">=</span> <span class="n">df_final</span><span class="p">[</span><span class="s">'LOAD_TIME'</span><span class="p">]</span> <span class="o">-</span> <span class="n">df_final</span><span class="p">[</span><span class="s">'FFP_DATE'</span><span class="p">]</span>
+<span class="n">lrfmc</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">((</span><span class="n">L</span> <span class="o">/</span> <span class="n">np</span><span class="p">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s">'D'</span><span class="p">))</span> <span class="o">/</span> <span class="mi">30</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span> <span class="p">[</span><span class="s">'L'</span><span class="p">])</span>
+
+<span class="n">lrfmc</span><span class="p">[</span><span class="s">'R'</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_final</span><span class="p">[</span><span class="s">'LAST_TO_END'</span><span class="p">]</span> <span class="o">/</span> <span class="mi">30</span>
+
+<span class="n">lrfmc</span><span class="p">[</span><span class="s">'F'</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_final</span><span class="p">[</span><span class="s">'FLIGHT_COUNT'</span><span class="p">]</span>
+
+<span class="n">lrfmc</span><span class="p">[</span><span class="s">'M'</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_final</span><span class="p">[</span><span class="s">'SEG_KM_SUM'</span><span class="p">]</span>
+
+<span class="n">lrfmc</span><span class="p">[</span><span class="s">'C'</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_final</span><span class="p">[</span><span class="s">'avg_discount'</span><span class="p">]</span>
+<span class="n">lrfmc</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>L</th>
+      <th>R</th>
+      <th>F</th>
+      <th>M</th>
+      <th>C</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>90.200000</td>
+      <td>0.033333</td>
+      <td>210</td>
+      <td>580717</td>
+      <td>0.961639</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>87.166667</td>
+      <td>0.366667</td>
+      <td>135</td>
+      <td>283712</td>
+      <td>1.254676</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>68.233333</td>
+      <td>3.233333</td>
+      <td>23</td>
+      <td>281336</td>
+      <td>1.090870</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>60.533333</td>
+      <td>0.166667</td>
+      <td>152</td>
+      <td>309928</td>
+      <td>0.970658</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>74.700000</td>
+      <td>2.633333</td>
+      <td>92</td>
+      <td>294585</td>
+      <td>0.967692</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>62982</th>
+      <td>14.500000</td>
+      <td>14.566667</td>
+      <td>2</td>
+      <td>3848</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62983</th>
+      <td>34.866667</td>
+      <td>9.900000</td>
+      <td>2</td>
+      <td>1134</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62984</th>
+      <td>49.466667</td>
+      <td>2.966667</td>
+      <td>4</td>
+      <td>8016</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62985</th>
+      <td>97.433333</td>
+      <td>0.966667</td>
+      <td>2</td>
+      <td>2594</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <th>62986</th>
+      <td>13.933333</td>
+      <td>13.333333</td>
+      <td>2</td>
+      <td>3934</td>
+      <td>0.000000</td>
+    </tr>
+  </tbody>
+</table>
+<p>57860 rows × 5 columns</p>
+</div>
+
+<p>After the data from the five indicators have been extracted and the distribution of the data analyzed on the EDA, these data have a fairly wide range so it is necessary to <em>standardize</em> the data.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
+
+<span class="n">X_std</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">().</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">lrfmc</span><span class="p">)</span>
+<span class="n">std_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="n">X_std</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">lrfmc</span><span class="p">.</span><span class="n">columns</span><span class="p">])</span>
+
+<span class="n">std_df</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>L</th>
+      <th>R</th>
+      <th>F</th>
+      <th>M</th>
+      <th>C</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1.482461</td>
+      <td>-0.946906</td>
+      <td>13.902061</td>
+      <td>26.850528</td>
+      <td>1.310280</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1.374135</td>
+      <td>-0.891598</td>
+      <td>8.634985</td>
+      <td>12.695673</td>
+      <td>2.903386</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.697994</td>
+      <td>-0.415949</td>
+      <td>0.769485</td>
+      <td>12.582436</td>
+      <td>2.012847</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.423014</td>
+      <td>-0.924783</td>
+      <td>9.828855</td>
+      <td>13.945092</td>
+      <td>1.359311</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.928929</td>
+      <td>-0.515504</td>
+      <td>5.615194</td>
+      <td>13.213865</td>
+      <td>1.343190</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>57855</th>
+      <td>-1.220915</td>
+      <td>1.464523</td>
+      <td>-0.705297</td>
+      <td>-0.642266</td>
+      <td>-3.917713</td>
+    </tr>
+    <tr>
+      <th>57856</th>
+      <td>-0.493586</td>
+      <td>0.690211</td>
+      <td>-0.705297</td>
+      <td>-0.771611</td>
+      <td>-3.917713</td>
+    </tr>
+    <tr>
+      <th>57857</th>
+      <td>0.027804</td>
+      <td>-0.460196</td>
+      <td>-0.564841</td>
+      <td>-0.443624</td>
+      <td>-3.917713</td>
+    </tr>
+    <tr>
+      <th>57858</th>
+      <td>1.740775</td>
+      <td>-0.792044</td>
+      <td>-0.705297</td>
+      <td>-0.702030</td>
+      <td>-3.917713</td>
+    </tr>
+    <tr>
+      <th>57859</th>
+      <td>-1.241151</td>
+      <td>1.259884</td>
+      <td>-0.705297</td>
+      <td>-0.638167</td>
+      <td>-3.917713</td>
+    </tr>
+  </tbody>
+</table>
+<p>57860 rows × 5 columns</p>
+</div>
+
+<h2 id="model-construction">Model Construction</h2>
+
+<h3 id="k-number-tuning-using-elbow-method">K-Number Tuning Using Elbow Method</h3>
+
+<p>The modeling is done using K Means because it considers:</p>
+<ol>
+  <li>Groups are not explicitly labeled in the dataset</li>
+  <li>The number of datasets tends to be large</li>
+  <li>Ease and speed of implementation</li>
+</ol>
+
+<p>In order to determine the optimal K (the number of cluster) for the K-Means Model later, visualization of the elbow method is carried out.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span>
+<span class="n">inertia</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">):</span>
+    <span class="n">kmeans</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">kmeans</span><span class="p">.</span><span class="n">fit</span><span class="p">(</span><span class="n">std_df</span><span class="p">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">inertia</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">kmeans</span><span class="p">.</span><span class="n">inertia_</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="p">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="n">sns</span><span class="p">.</span><span class="n">lineplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">y</span><span class="o">=</span><span class="n">inertia</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">'#000087'</span><span class="p">,</span> <span class="n">linewidth</span> <span class="o">=</span> <span class="mi">2</span><span class="p">);</span>
+<span class="n">sns</span><span class="p">.</span><span class="n">scatterplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">y</span><span class="o">=</span><span class="n">inertia</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">'#800000'</span><span class="p">,</span>  <span class="n">linestyle</span><span class="o">=</span><span class="s">'--'</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><img src="output_39_0.png" alt="png" /></p>
+
+<p>The fault point on the <em>elbow</em> graph is at X = 4 so the K value chosen for <em>clustering</em> is <em>4</em>.</p>
+
+<h3 id="perform-pca">Perform PCA</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">PCA</span>
+<span class="n">pca</span> <span class="o">=</span> <span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">principalComponents</span> <span class="o">=</span> <span class="n">pca</span><span class="p">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">std_df</span><span class="p">)</span>
+<span class="n">principalDf</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="n">principalComponents</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">'pc1'</span><span class="p">,</span> <span class="s">'pc2'</span><span class="p">])</span>
+<span class="n">principalDf</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>pc1</th>
+      <th>pc2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>25.772196</td>
+      <td>-2.384333</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>14.153543</td>
+      <td>0.832360</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>8.741976</td>
+      <td>0.540395</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>15.187636</td>
+      <td>-1.101030</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>12.104293</td>
+      <td>-0.412134</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>57855</th>
+      <td>-2.326677</td>
+      <td>-3.331867</td>
+    </tr>
+    <tr>
+      <th>57856</th>
+      <td>-1.905904</td>
+      <td>-3.263502</td>
+    </tr>
+    <tr>
+      <th>57857</th>
+      <td>-1.017829</td>
+      <td>-3.439390</td>
+    </tr>
+    <tr>
+      <th>57858</th>
+      <td>-0.699953</td>
+      <td>-2.844311</td>
+    </tr>
+    <tr>
+      <th>57859</th>
+      <td>-2.244897</td>
+      <td>-3.398755</td>
+    </tr>
+  </tbody>
+</table>
+<p>57860 rows × 2 columns</p>
+</div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># scree plot
+</span><span class="n">plt</span><span class="p">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="nb">round</span><span class="p">(</span><span class="n">pca</span><span class="p">.</span><span class="n">explained_variance_ratio_</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="n">decimals</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">lbls</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+<span class="n">plt</span><span class="p">.</span><span class="n">bar</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">height</span> <span class="o">=</span> <span class="n">var</span><span class="p">,</span> <span class="n">tick_label</span> <span class="o">=</span> <span class="n">lbls</span><span class="p">)</span>
+<span class="n">plt</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="output_43_0.png" alt="png" /></p>
+
+<p>PCA with two axes can explain about 70% of the true data variance.</p>
+
+<h3 id="clustering-by-4">Clustering by 4</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">model</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">label</span> <span class="o">=</span> <span class="n">model</span><span class="p">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">principalComponents</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="p">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">uniq</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="n">unique</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">uniq</span><span class="p">:</span>
+   <span class="n">plt</span><span class="p">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">principalComponents</span><span class="p">[</span><span class="n">label</span> <span class="o">==</span> <span class="n">i</span> <span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="p">,</span> <span class="n">principalComponents</span><span class="p">[</span><span class="n">label</span> <span class="o">==</span> <span class="n">i</span> <span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">i</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="p">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="p">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="output_46_0.png" alt="png" /></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">"Cluster category"</span><span class="p">:</span> <span class="p">[</span><span class="s">'Customer base 1'</span><span class="p">,</span> <span class="s">'Customer base 2'</span><span class="p">,</span> <span class="s">'Customer base 3'</span><span class="p">,</span> <span class="s">'Customer base 4'</span><span class="p">]})</span>
+
+<span class="n">n</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">Series</span><span class="p">(</span><span class="n">model</span><span class="p">.</span><span class="n">labels_</span><span class="p">).</span><span class="n">value_counts</span><span class="p">()</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">model</span><span class="p">.</span><span class="n">cluster_centers_</span><span class="p">)</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">concat</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="n">c</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">concat</span><span class="p">([</span><span class="n">result</span><span class="p">,</span> <span class="n">r</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">result</span><span class="p">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">'Cluster category'</span><span class="p">,</span> <span class="s">'Data points'</span><span class="p">,</span> <span class="s">'pc1'</span><span class="p">,</span> <span class="s">'pc2'</span><span class="p">]</span>
+<span class="n">result</span>
+</code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Cluster category</th>
+      <th>Data points</th>
+      <th>pc1</th>
+      <th>pc2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Customer base 1</td>
+      <td>24038</td>
+      <td>-0.763611</td>
+      <td>-0.647971</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Customer base 2</td>
+      <td>15271</td>
+      <td>-0.707220</td>
+      <td>1.118463</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Customer base 3</td>
+      <td>15390</td>
+      <td>1.020182</td>
+      <td>-0.094622</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Customer base 4</td>
+      <td>3161</td>
+      <td>4.293313</td>
+      <td>-0.023380</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="conclusions">Conclusions</h2>
+
+<ol>
+  <li>Based on the results of clustering, this flight’s customer can be divided into 4 groups</li>
+  <li>Four customer categories based on variations in a number of features, namely:
+    <ul>
+      <li>The duration of the customer registered as a member (customer length relationship)</li>
+      <li>Distance from the last flight time of the most recent flight order (consumption time interval)</li>
+      <li>Number of flights followed (consumption frequency)</li>
+      <li>Distance traveled during flight (flight mileage)</li>
+      <li>Average discount obtained (average value of discount)</li>
+    </ul>
+  </li>
+</ol>
+
+<h2 id="recommendations">Recommendations</h2>
+
+<ol>
+  <li>Passengers with high flight count and long mileage are given a free upgrade class promo after the flight count and mileage is above quantile 3</li>
+  <li>Unspent points can be exchanged for souvenirs or items sold on board (perfume, neck pillows, mugs, pins, or key chains)</li>
+</ol>
+:ET
